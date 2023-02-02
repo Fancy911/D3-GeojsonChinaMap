@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div style="display: flex;">
+        <svg id="svg" style="background: pink;"></svg>
+    </div>
+</body>
+<script src="https://d3js.org/d3.v6.min.js"></script>
+<script>
+    // 构建类，地图的画布，地图的绘制 
+    class D3GeoMap{
+        constructor () {
+            // 定义画布
+            this.width = 1600;
+            this.height = 1000;
+            this.margin = {top:10, left:40, bottom:40, right:10}
+            this.innerwidth = this.width - this.margin.left - this.margin.right
+            this.innerHeight = this.height - this.margin.top - this.margin.bottom
+            const svg = d3.select("#svg");
+            svg.attr('viewBox',`0 0 ${this.width} ${this.height}`)
+                .attr("width",this.width)
+                .attr("height",this.height)
+
+            this.svg = svg
+
+            // 绘图组
+            this.maingroup = svg.append('g').attr('id','maingroup')
+
+            //创建一个地图映射
+            this.projection = d3.geoMercator()
+                                .scale(1200)
+                                .center([105, 38])
+                                .translate([this.innerwidth/2,this.innerHeight/2]);
+        }
+        // 初始化函数
+        init(mapData) {
+            this.geoData = mapData
+
+            // 颜色映射 interpolateWarm interpolateCool interpolateRainbow
+            this.colorScale = d3.scaleOrdinal()
+                .range(d3.quantize(d3.interpolateCool,this.geoData.features.length))
+        
+            this.drawMap();
+
+        }
+        drawMap(){
+            // 路径的生成器
+            const path = d3.geoPath().projection(this.projection);
+            this.maingroup.append("g").lower().selectAll("path")
+                .data(this.geoData.features)
+                .enter()
+                .append("path")
+                .attr("d", path)
+                .attr("fill",d=>{
+                    let cityName = d.properties.name
+                    return this.colorScale(cityName)
+                })
+                .attr("stroke","white")
+                .on('mouseover',function(d){
+                    d3.select(this)
+                        .attr("opacity", 0.7)
+                        .attr("stroke","black")
+                        .attr("stroke-width", 2);
+                })
+                .on('mouseout', function(d){
+                    d3.select(this)
+                        .attr("opacity", 1)
+                        .attr("stroke","white")
+                        .attr("stroke-width",1);
+                })
+                .append("title")
+                .text(d=>d.properties.name)
+        }
+    }
+    const map = new D3GeoMap();
+    d3.json("map.json").then(data =>{
+        map.init(data);
+    })
+</script>
+</html>
